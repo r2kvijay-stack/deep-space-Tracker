@@ -65,30 +65,38 @@ Built as a **BTech Final Year Project** using only Web Technologies - No install
 
 ---
 
+## 📁 Project Structure
+deep-space-tracker/
+├── index.html  - Main Project - Full 3D App in Single File
+└── README.md   - Project Documentation
+
+
+---
+
 ## 💻 How To Run Locally
 
 1. Download `index.html`
-2. Double-click to open in Chrome / Edge
-3. No server, No installation needed
+2. Double Click to Open in Chrome
+3. Done - No Server Needed
 
 ---
 
 ## 👨‍💻 Author
 
-**BTech Student - Deep Space Project**
-Built with passion for Space & Technology.
+BTech Student
+Deep Space Project - Built with Passion for Space Technology
 
 ---
 
-## Credits & Data Sources
+## 🙏 Credits
 
-- NASA JPL - Voyager, Pioneer, New Horizons Mission Data
+- NASA JPL - Voyager, Pioneer, New Horizons Data
 - NASA Mars 2020 - Perseverance Rover Data
 - Open Notify - ISS Live Location API
 - Three.js - 3D Engine
 
 ---
 
-⭐ **If you like this project, give it a Star!**
+⭐ If you like this project, please give it a Star!
 
 ## 📁 Project Structure
