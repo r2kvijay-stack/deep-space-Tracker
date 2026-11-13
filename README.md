@@ -66,9 +66,9 @@ Built as a **BTech Final Year Project** using only Web Technologies - No install
 ---
 
 ## 📁 Project Structure
-deep-space-tracker
-index.html  - Main Project - Full 3D App in Single File
-README.md   - Project Documentation
+deep-space-tracker/
+├── index.html  - Main Project - Full 3D App in Single File
+└── README.md   - Project Documentation
 
 
 ---
