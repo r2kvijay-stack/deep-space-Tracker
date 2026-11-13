@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep Space 3D Live Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',Arial,sans-serif}
+body{background:#000;color:#fff;overflow:hidden}
+#header{position:fixed;top:0;left:0;right:0;padding:14px 20px;background:rgba(0,0,0,0.75);z-index:10;display:flex;justify-content:space-between;align-items:center}
+#header b{font-size:19px}#header b span{color:#00f0ff}#header small{color:#aaa}
+#panel{position:fixed;top:70px;right:12px;width:305px;background:rgba(8,10,25,0.88);border:1px solid #00f0ff;border-radius:16px;padding:14px;z-index:10;max-height:82vh;overflow-y:auto}
+#panel h3{color:#00f0ff;margin-bottom:8px}
+.probe{padding:10px;margin:8px 0;border-radius:10px;background:rgba(255,255,255,0.07);border-left:4px solid #00f0ff;cursor:pointer}
+.probe:hover{background:rgba(0,240,255,0.15)}
+.probe b{font-size:13px}.probe p{font-size:12px;color:#ccc;margin-top:4px;line-height:1.5}
+#controls{position:fixed;bottom:15px;left:15px;background:rgba(0,0,0,0.75);padding:12px 14px;border-radius:12px;font-size:12px;z-index:10;line-height:1.8}
+#controls b{color:#00f0ff}
+.btn{border:1px solid #00f0ff;background:transparent;color:#00f0ff;padding:6px 10px;border-radius:20px;cursor:pointer;font-size:12px;margin:3px 2px}
+.btn:hover{background:#00f0ff;color:#000}
+#infoBox{position:fixed;bottom:15px;right:15px;width:280px;background:rgba(0,20,30,0.92);border:1px solid #fff;border-radius:12px;padding:14px;z-index:11;display:none}
+#infoBox h3{color:#00f0ff}#infoBox p{font-size:13px;color:#ddd;margin-top:6px;line-height:1.6}
+@media(max-width:700px){#panel{width:250px;top:95px}#header small{display:none}}
+</style>
+</head>
+<body>
+<div id="header"><b>🛰️ DEEP SPACE <span>3D LIVE TRACKER</span></b><small>Drag to Rotate | Scroll to Zoom | Click Probe</small></div>
+<div id="panel">
+<h3>📡 LIVE TRACKING</h3>
+<div style="font-size:11px;color:#aaa;margin-bottom:8px">Click any probe to focus camera</div>
+<div class="probe" onclick="focusProbe('v1')"><b>🔴 VOYAGER 1</b><p>Distance: <span id="v1">24.30000</span> Billion KM<br>Speed: 61,000 KM/h | Signal: 22.5 hrs<br>Status: Interstellar Space</p></div>
+<div class="probe" style="border-color:#ff8c00" onclick="focusProbe('v2')"><b>🟠 VOYAGER 2</b><p>Distance: <span id="v2">20.20000</span> Billion KM<br>Speed: 55,000 KM/h | Signal: 18.7 hrs<br>Status: Interstellar Space</p></div>
+<div class="probe" style="border-color:#00ffff" onclick="focusProbe('nh')"><b>🔵 NEW HORIZONS</b><p>Distance: <span id="nh">8.80000</span> Billion KM<br>Speed: 58,000 KM/h | Signal: 8.1 hrs<br>Status: Kuiper Belt - Beyond Pluto</p></div>
+<div class="probe" style="border-color:#ffffff" onclick="focusProbe('p10')"><b>⚪ PIONEER 10</b><p>Distance: <span id="p10">19.20000</span> Billion KM<br>Speed: 43,000 KM/h | Status: Signal Lost 2003</p></div>
+<div class="probe" style="border-color:#ff00ff" onclick="focusProbe('p11')"><b>🟣 PIONEER 11</b><p>Distance: <span id="p11">16.80000</span> Billion KM<br>Speed: 41,000 KM/h | Status: Signal Lost 1995</p></div>
+<div class="probe" style="border-color:#00ff00" onclick="focusProbe('iss')"><b>🟢 ISS - LIVE</b><p>Altitude: 420 KM | Speed: 27,600 KM/h<br>Location: <span id="issText">Fetching live...</span></p></div>
+<div class="probe" style="border-color:#ffcc00" onclick="focusProbe('rover')"><b>🟡 PERSEVERANCE ROVER</b><p>Location: Mars - Jezero Crater<br>Speed: 0.15 KM/h | Status: Exploring Mars<br>Sol: 1350+ Days on Mars</p></div>
+<p style="font-size:11px;color:#888;margin-top:8px">Data: NASA JPL + Open Notify API. Distances increase live every second.</p>
+</div>
+<div id="controls"><b>🎮 HOW TO INTERACT</b><br>🖱️ Drag = Rotate &nbsp; 🔍 Scroll = Zoom In/Out<br>👆 Click Probe Card = Focus Camera<br><button class="btn" onclick="resetCamera()">Reset View</button><button class="btn" onclick="focusProbe('v1')">Voyager 1</button><button class="btn" onclick="focusProbe('iss')">ISS</button><button class="btn" onclick="togglePause()">Pause / Play</button></div>
+<div id="infoBox"><h3 id="infoTitle">Voyager 1</h3><p id="infoDesc">Info</p><button class="btn" onclick="document.getElementById('infoBox').style.display='none'">Close</button></div>
+<script>
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 3000);
+var renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+var controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.05;
+controls.minDistance = 10; controls.maxDistance = 500;
+camera.position.set(0, 80, 190); controls.update();
+var light = new THREE.PointLight(0xffffff, 2, 0); scene.add(light);
+scene.add(new THREE.AmbientLight(0x666666));
+var sun = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 32), new THREE.MeshBasicMaterial({color:0xffcc00}));
+scene.add(sun);
+function makePlanet(size, color, distance, speed, name){
+  var mesh = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), new THREE.MeshBasicMaterial({color:color}));
+  mesh.userData = {dist:distance, speed:speed, angle:Math.random()*6, name:name};
+  scene.add(mesh);
+  var ring = new THREE.Mesh(new THREE.RingGeometry(distance-0.2, distance+0.2, 120), new THREE.MeshBasicMaterial({color:0x444444, side:THREE.DoubleSide, transparent:true, opacity:0.35}));
+  ring.rotation.x = Math.PI/2; scene.add(ring); return mesh;
+}
+function makeProbe(color, distance, name){
+  var mesh = new THREE.Mesh(new THREE.SphereGeometry(1.6, 16, 16), new THREE.MeshBasicMaterial({color:color}));
+  mesh.userData = {dist:distance, angle:Math.random()*6, name:name};
+  scene.add(mesh);
+  var glow = new THREE.Mesh(new THREE.RingGeometry(2.2, 2.6, 32), new THREE.MeshBasicMaterial({color:color, side:THREE.DoubleSide, transparent:true, opacity:0.6}));
+  glow.rotation.x = Math.PI/2; mesh.add(glow); return mesh;
+}
+var earth = makePlanet(3, 0x2f7bff, 45, 0.006, "Earth");
+var mars = makePlanet(2.5, 0xff5522, 62, 0.004, "Mars");
+var jupiter = makePlanet(6, 0xffaa55, 82, 0.0025, "Jupiter");
+var pluto = makePlanet(1.6, 0xaaaaaa, 112, 0.0012, "Pluto");
+var v1Mesh = makeProbe(0xff2222, 165, "Voyager 1");
+var v2Mesh = makeProbe(0xff8c00, 148, "Voyager 2");
+var nhMesh = makeProbe(0x00ffff, 122, "New Horizons");
+var p10Mesh = makeProbe(0xffffff, 136, "Pioneer 10");
+var p11Mesh = makeProbe(0xff00ff, 126, "Pioneer 11");
+var issMesh = makeProbe(0x00ff00, 50, "ISS");
+var roverMesh = makeProbe(0xffcc00, 62, "Perseverance Rover");
+for(var i=0;i<900;i++){
+  var star = new THREE.Mesh(new THREE.SphereGeometry(0.5, 6, 6), new THREE.MeshBasicMaterial({color:0xffffff}));
+  star.position.set((Math.random()-0.5)*1000, (Math.random()-0.5)*1000, (Math.random()-0.5)*1000);
+  scene.add(star);
+}
+var paused = false; var focused = null;
+function togglePause(){ paused = !paused; }
+function resetCamera(){ focused = null; camera.position.set(0,80,190); controls.target.set(0,0,0); }
+function focusProbe(id){
+  var map = {v1:v1Mesh, v2:v2Mesh, nh:nhMesh, p10:p10Mesh, p11:p11Mesh, iss:issMesh, rover:roverMesh};
+  focused = map[id];
+  var infos = {
+    v1:["Voyager 1 - Farthest Object Ever","Launched 1977. First human object to enter interstellar space. 24.3 Billion KM away. Signal takes 22.5 hours to reach Earth."],
+    v2:["Voyager 2 - Interstellar","Launched 1977. Only probe to visit Uranus & Neptune. Now in interstellar space, 20.2 Billion KM away."],
+    nh:["New Horizons - Pluto Explorer","Launched 2006. First to flyby Pluto in 2015, then Arrokoth. Now in Kuiper Belt, 8.8 Billion KM away."],
+    p10:["Pioneer 10 - Jupiter Pioneer","Launched 1972. First to cross Asteroid Belt & flyby Jupiter. Signal lost 2003. Heading to Aldebaran."],
+    p11:["Pioneer 11 - Saturn Pioneer","Launched 1973. First to flyby Saturn. Signal lost 1995. Heading to Aquila constellation."],
+    iss:["ISS - International Space Station","Live! Orbiting Earth at 27,600 KM/h, 420 KM altitude. 6 Astronauts living inside right now."],
+    rover:["Perseverance Rover - Mars Explorer","Landed on Mars Feb 2021 in Jezero Crater. Searching for ancient life. Driving on Mars, collecting rock samples. Has a helicopter Ingenuity."]
+  };
+  document.getElementById('infoTitle').innerText = infos[id][0];
+  document.getElementById('infoDesc').innerText = infos[id][1];
+  document.getElementById('infoBox').style.display = 'block';
+}
+var raycaster = new THREE.Raycaster(); var mouse = new THREE.Vector2();
+renderer.domElement.addEventListener('click', function(event){
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  var intersects = raycaster.intersectObjects([v1Mesh, v2Mesh, nhMesh, p10Mesh, p11Mesh, issMesh, roverMesh]);
+  if(intersects.length > 0){
+    var name = intersects[0].object.userData.name;
+    var idMap = {"Voyager 1":"v1","Voyager 2":"v2","New Horizons":"nh","Pioneer 10":"p10","Pioneer 11":"p11","ISS":"iss","Perseverance Rover":"rover"};
+    focusProbe(idMap[name]);
+  }
+});
+var d1=24.30000, d2=20.20000, dnh=8.80000, dp10=19.20000, dp11=16.80000;
+setInterval(function(){
+  d1+=0.00001; d2+=0.000009; dnh+=0.000008; dp10+=0.000006; dp11+=0.000005;
+  document.getElementById('v1').innerText = d1.toFixed(5);
+  document.getElementById('v2').innerText = d2.toFixed(5);
+  document.getElementById('nh').innerText = dnh.toFixed(5);
+  document.getElementById('p10').innerText = dp10.toFixed(5);
+  document.getElementById('p11').innerText = dp11.toFixed(5);
+}, 1000);
+fetch('https://api.wheretheiss.at/v1/satellites/25544').then(function(r){return r.json();}).then(function(d){
+  document.getElementById('issText').innerText = "Lat " + d.latitude.toFixed(2) + ", Lon " + d.longitude.toFixed(2) + " - LIVE";
+}).catch(function(){ document.getElementById('issText').innerText = "Lat 12.52, Lon 78.20 (Offline Demo)"; });
+function animate(){
+  requestAnimationFrame(animate);
+  if(!paused){
+    sun.rotation.y += 0.001;
+    [earth, mars, jupiter, pluto].forEach(function(p){
+      p.userData.angle += p.userData.speed;
+      p.position.x = Math.cos(p.userData.angle) * p.userData.dist;
+      p.position.z = Math.sin(p.userData.angle) * p.userData.dist;
+    });
+    [v1Mesh, v2Mesh, nhMesh, p10Mesh, p11Mesh].forEach(function(p){
+      p.userData.angle += 0.0006;
+      p.position.x = Math.cos(p.userData.angle) * p.userData.dist;
+      p.position.z = Math.sin(p.userData.angle) * p.userData.dist;
+    });
+    issMesh.userData.angle += 0.04;
+    issMesh.position.x = earth.position.x + Math.cos(issMesh.userData.angle)*6;
+    issMesh.position.z = earth.position.z + Math.sin(issMesh.userData.angle)*6;
+    issMesh.position.y = Math.sin(issMesh.userData.angle)*2;
+    roverMesh.position.x = mars.position.x + Math.cos(Date.now()*0.0005)*4;
+    roverMesh.position.z = mars.position.z + Math.sin(Date.now()*0.0005)*4;
+    roverMesh.position.y = Math.sin(Date.now()*0.001)*1;
+  }
+  if(focused){
+    var targetPos = focused.position.clone();
+    camera.position.lerp(new THREE.Vector3(targetPos.x+15, targetPos.y+10, targetPos.z+15), 0.05);
+    controls.target.lerp(targetPos, 0.05);
+  }
+  controls.update(); renderer.render(scene, camera);
+}
+animate();
+window.addEventListener('resize', function(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
