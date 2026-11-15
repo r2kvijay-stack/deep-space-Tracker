@@ -2,7 +2,7 @@
 
 ### Interactive 3D Solar System - Track NASA's Farthest Spacecraft in Real-Time
 
-**Live Demo:** https://your-r2kvijay-stack.github.io/deep-space-Tracker/
+**Live Demo:** https://r2kvijay-stack.github.io/deep-space-Tracker/
 
 ---
 
